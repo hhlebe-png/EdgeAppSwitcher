@@ -121,6 +121,10 @@ import AppKit
     }
     private func sample(_ point: CGPoint, _ buttons: Int, _ time: Duration) {
         guard started, lifecycle.canSample else { return }
+        if controller.isSelecting {
+            trigger.deferExit()
+            return
+        }
         let currentScreens = screens()
         trigger.setTooltipFrame(tooltipFrame())
         switch trigger.sample(TriggerSample(time: time, point: point, pressedButtons: buttons, screens: currentScreens, side: settings.side)) {

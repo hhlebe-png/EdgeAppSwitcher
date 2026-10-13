@@ -114,6 +114,34 @@ import XCTest
             coordinator.stop()
         }
     }
+    func testPointerExitDoesNotCancelPendingSelectionAndFailureRestartsExitDelay() async {
+        let name = UUID().uuidString; let defaults = UserDefaults(suiteName: name)!
+        defer { defaults.removePersistentDomain(forName: name) }
+        let store = RunningAppStore(); store.replace([rawApp(42, bundle: "a")])
+        let backend = FakeActivationBackend(); backend.liveToken = store.records[0].instances[0].token; backend.suspend = true
+        let controller = BarController(store: store, recency: RecencyStore(), activation: ActivationService(backend: backend), presentation: FakeBarPresentation(), frontmost: { nil })
+        let screen = ScreenDescriptor(id: 1, frame: CGRect(x: 0, y: 0, width: 1000, height: 800), visibleFrame: CGRect(x: 0, y: 0, width: 1000, height: 800), isPrimary: true)
+        let sampler = FakePointerSampler()
+        let workspace = NotificationCenter()
+        let coordinator = AppCoordinator(settings: SettingsStore(defaults: defaults), sampler: sampler, controller: controller, screens: { [screen] }, pointer: { CGPoint(x: 20, y: 400) }, tooltipFrame: { nil }, startSources: {}, stopSources: {}, refreshSources: {}, focusFirst: {}, workspaceCenter: workspace, applicationCenter: NotificationCenter())
+        coordinator.start()
+        defer { coordinator.stop() }
+        sampler.emit(20, 0); sampler.emit(0, 100); sampler.emit(0, 400)
+        let task = Task { await controller.select(store.records[0].id) }
+        for _ in 0..<100 where backend.continuation == nil { await Task.yield() }
+        guard let continuation = backend.continuation else { XCTFail("Selection must reach confirmation wait"); return }
+        sampler.emit(300, 450); sampler.emit(300, 750)
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertTrue(controller.isSelecting)
+        continuation.resume(returning: false); backend.continuation = nil
+        await task.value
+        XCTAssertTrue(controller.isVisible)
+        sampler.emit(300, 800); sampler.emit(300, 1099)
+        XCTAssertTrue(controller.isVisible)
+        sampler.emit(300, 1100)
+        XCTAssertFalse(controller.isVisible)
+    }
+
     func testActivationDuringSelectionPreservesMatchingConfirmationOnly() async {
         for keyboard in [false, true] {
             for matching in [false, true] {

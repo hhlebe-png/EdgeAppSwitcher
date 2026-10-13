@@ -6,6 +6,23 @@ final class EdgeTriggerTests: XCTestCase {
     private func sample(_ ms: Int, x: CGFloat = 1, y: CGFloat = 400, buttons: Int = 0, screens: [ScreenDescriptor]? = nil, side: EdgeSide = .left) -> TriggerSample {
         TriggerSample(time: .milliseconds(ms), point: CGPoint(x: x, y: y), pressedButtons: buttons, screens: screens ?? [screen], side: side)
     }
+    func testPressBeginningInsideKeepsBarOpenUntilReleaseThenStartsExitDelay() {
+        var trigger = EdgeTrigger()
+        trigger.didShow(screen: 1, panelFrame: CGRect(x: 8, y: 300, width: 64, height: 200), corridor: CGRect(x: 0, y: 300, width: 8, height: 200), keyboardMode: false)
+        XCTAssertEqual(trigger.sample(sample(0, x: 40, buttons: 1)), .none)
+        XCTAssertEqual(trigger.sample(sample(100, x: 300, buttons: 1)), .none)
+        XCTAssertEqual(trigger.sample(sample(400, x: 300, buttons: 1)), .none)
+        XCTAssertEqual(trigger.sample(sample(450, x: 300)), .none)
+        XCTAssertEqual(trigger.sample(sample(749, x: 300)), .none)
+        XCTAssertEqual(trigger.sample(sample(750, x: 300)), .hide)
+    }
+    func testOutsidePressDoesNotKeepBarOpen() {
+        var trigger = EdgeTrigger()
+        trigger.didShow(screen: 1, panelFrame: CGRect(x: 8, y: 300, width: 64, height: 200), corridor: .zero, keyboardMode: false)
+        XCTAssertEqual(trigger.sample(sample(0, x: 300, buttons: 1)), .none)
+        XCTAssertEqual(trigger.sample(sample(300, x: 300, buttons: 1)), .hide)
+    }
+
     func testDwellRequires250msOnSameScreen() {
         var trigger = EdgeTrigger(); trigger.reset(requireExit: false)
         XCTAssertEqual(trigger.sample(sample(0)), .none)

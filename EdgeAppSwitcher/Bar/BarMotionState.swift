@@ -23,7 +23,9 @@ import Observation
     func present(side: EdgeSide, reduceMotion: Bool, now: TimeInterval) {
         _ = advance(now: now, generation: generation)
         self.side = side
-        self.reduceMotion = reduceMotion
+        setReduceMotion(reduceMotion, now: now)
+        // An unchanged target keeps its original completion deadline.
+        guard phase != .appearing, phase != .shown else { return }
         if phase == .hidden {
             opacity = 0
             offsetX = reduceMotion ? 0 : edgeOffset
@@ -33,7 +35,7 @@ import Observation
 
     func dismiss(now: TimeInterval) {
         _ = advance(now: now, generation: generation)
-        guard phase != .hidden else { return }
+        guard phase != .hidden, phase != .dismissing else { return }
         retarget(phase: .dismissing, opacity: 0, offset: edgeOffset, duration: 0.12, now: now)
     }
 

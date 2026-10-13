@@ -19,7 +19,7 @@ xcodebuild -project EdgeAppSwitcher.xcodeproj -scheme EdgeAppSwitcher -configura
 xcodebuild -project EdgeAppSwitcher.xcodeproj -scheme EdgeAppSwitcher -configuration Release -destination 'generic/platform=macOS' -derivedDataPath .build/Release ARCHS='arm64 x86_64' ONLY_ACTIVE_ARCH=NO build
 ```
 
-Releaseのアプリは `.build/Release/Build/Products/Release/EdgeAppSwitcher.app` に生成されます。元の開発環境ではDebugの113テストが成功し、arm64とx86_64を含むReleaseをビルドしました。この公開準備スナップショット自体の再ビルドは未実施です。
+Releaseのアプリは `.build/Release/Build/Products/Release/EdgeAppSwitcher.app` に生成されます。元の開発環境ではDebugの120テストが成功し、arm64とx86_64を含むReleaseをビルドしました。配布版の試験結果は各Releaseの説明を参照してください。
 
 ## 動作範囲と配布上の注意
 
@@ -34,3 +34,9 @@ ReleaseはHardened Runtimeを有効にしたad-hoc署名です。Developer ID署
 このプロジェクトはMITライセンスで提供します。全文は `LICENSE` を参照してください。
 
 アイコンは本アプリのために生成したAI画像で、由来と元画像のハッシュは `Artwork/README.md` に記載しています。この説明は法的な著作権判断ではありません。
+
+## アプリのダウンロード
+
+[GitHub Releases](https://github.com/hhlebe-png/EdgeAppSwitcher/releases) にアプリZIPを配布します。0.1.1はアニメーション・スクロールの修正版で、再配置時の位置保持、操作中の早すぎる収納、スクロールバーの隠れた余白を修正しています。
+
+ダウンロード後にZIPを展開してアプリを任意のフォルダへコピーしてください。Developer ID署名・Apple公証はなく、Gatekeeperが起動を拒否する場合があります。セキュリティ保護の無効化やquarantine削除を求める配布ではありません。必要であれば公開ソースを確認してXcodeで自分のMac向けにビルドできます。

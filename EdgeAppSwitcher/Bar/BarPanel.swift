@@ -16,11 +16,13 @@ import SwiftUI
     var onSelect: ((AppID) -> Void)?
     var onKeyDown: ((NSEvent) -> Bool)?
     private var keyboardMode = false
+    private var isPresented = false
     private var generation: UInt64 = 0
     private var motionTask: Task<Void, Never>?
     private var screenDescriptor: ScreenDescriptor?
     private var side: EdgeSide = .left
     private var tooltipWindow: NSWindow?
+    private var keyboardLabel: (text: String, offsetY: CGFloat)?
 
     var tooltipFrame: CGRect? {
         guard tooltipWindow?.isVisible == true else { return nil }
@@ -74,12 +76,19 @@ import SwiftUI
     func present(rows: [BarRow], frame: CGRect, keyboardMode: Bool) {
         generation &+= 1
         motionTask?.cancel(); motionTask = nil
+        let retainedLabel = isPresented && keyboardMode && self.keyboardMode ? keyboardLabel : nil
         cancelTooltip()
+        if isPresented, self.keyboardMode != keyboardMode { viewState.resetInteraction() }
         self.keyboardMode = keyboardMode
         viewState.rows = rows
-        viewState.message = nil
-        viewState.presentationID &+= 1
-        viewState.resetInteraction()
+        // Repositioning a visible session retains its native scroll view and focus.
+        // A logically dismissed session resets even while its fade is still visible.
+        if !isPresented {
+            viewState.message = nil
+            viewState.presentationID &+= 1
+            viewState.resetInteraction()
+        }
+        isPresented = true
         viewState.motion.present(side: side,
             reduceMotion: NSWorkspace.shared.accessibilityDisplayShouldReduceMotion,
             now: ProcessInfo.processInfo.systemUptime)
@@ -88,6 +97,9 @@ import SwiftUI
         // SwiftUI owns visual opacity; AppKit never starts a competing alpha animator.
         alphaValue = 1
         orderFrontRegardless()
+        if let retainedLabel {
+            showLabel(retainedLabel.text, at: CGPoint(x: frame.midX, y: frame.maxY - retainedLabel.offsetY))
+        }
         if keyboardMode { makeKey() }
         runMotion()
     }
@@ -114,6 +126,7 @@ import SwiftUI
     }
 
     func dismiss() {
+        isPresented = false
         generation &+= 1
         motionTask?.cancel(); motionTask = nil
         cancelTooltip()
@@ -162,11 +175,13 @@ import SwiftUI
     }
 
     private func cancelTooltip() {
+        keyboardLabel = nil
         tooltipWindow?.orderOut(nil)
     }
 
     private func showLabel(_ text: String, at point: CGPoint) {
         guard let screenDescriptor, isVisible, !ignoresMouseEvents else { return }
+        keyboardLabel = (text, frame.maxY - point.y)
         let label = NSTextField(wrappingLabelWithString: text)
         label.font = .systemFont(ofSize: 12)
         label.textColor = .labelColor

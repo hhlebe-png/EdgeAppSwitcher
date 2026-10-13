@@ -34,6 +34,8 @@ struct EdgeTrigger {
     private var display: Display?
     private var tooltipFrame: CGRect?
     private var exitStart: Duration?
+    private var insidePress = false
+    private var previousButtons = 0
 
     mutating func reset(requireExit: Bool) {
         self = EdgeTrigger()
@@ -45,9 +47,14 @@ struct EdgeTrigger {
         display = Display(screen: screen, panelFrame: panelFrame, corridor: corridor, keyboardMode: keyboardMode)
         tooltipFrame = nil
         exitStart = nil
+        insidePress = false
+        previousButtons = 0
         requiresExit = true
         previousScreen = screen
     }
+
+    // Pending activation owns the visible interaction until it completes.
+    mutating func deferExit() { exitStart = nil }
 
     mutating func setTooltipFrame(_ frame: CGRect?) {
         tooltipFrame = frame
@@ -63,7 +70,11 @@ struct EdgeTrigger {
 
         if let display {
             guard !display.keyboardMode else { return .none }
-            if display.panelFrame.contains(input.point) || display.corridor.contains(input.point) || tooltipFrame?.contains(input.point) == true {
+            let insidePanel = display.panelFrame.contains(input.point)
+            if input.pressedButtons != 0, previousButtons == 0, insidePanel { insidePress = true }
+            previousButtons = input.pressedButtons
+            if input.pressedButtons == 0 { insidePress = false }
+            if insidePress || insidePanel || display.corridor.contains(input.point) || tooltipFrame?.contains(input.point) == true {
                 exitStart = nil
             } else {
                 if exitStart == nil || delayed { exitStart = input.time }

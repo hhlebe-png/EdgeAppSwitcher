@@ -134,7 +134,8 @@ struct BarView: View {
                 }
                 .padding(.vertical, 8)
             }
-            .scrollIndicators(.hidden)
+            // .hidden can retain a legacy scroller gutter and clip our 64pt cells.
+            .scrollIndicators(.never)
             .onChange(of: state.message) { _, message in
                 if message != nil { proxy.scrollTo("message", anchor: .top) }
             }
